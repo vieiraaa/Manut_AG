@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from algoritmo_genetico import historico_fitness_global  # Deve estar visível no módulo
+from database import inicializar_banco
+inicializar_banco()
 
 st.set_page_config(page_title="Indicadores de Manutenção", layout="wide")
 st.title("📈 Indicadores de Desempenho - Manutenção Industrial")
