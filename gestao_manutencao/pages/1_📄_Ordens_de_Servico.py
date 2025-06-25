@@ -8,6 +8,8 @@ from database import (
     atualizar_ordem_completa
 )
 from login import autenticar_usuario
+from database import inicializar_banco
+inicializar_banco()
 
 autenticar_usuario()
 
