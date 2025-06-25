@@ -177,3 +177,43 @@ def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutaca
     conn.close()
 
     return programacao
+
+def inicializar_banco():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS colaboradores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT,
+        especialidade TEXT,
+        setor TEXT,
+        jornada INTEGER,
+        dias TEXT
+    )""")
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS ordens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        descricao TEXT,
+        tipo_manutencao TEXT,
+        setor TEXT,
+        equipamento TEXT,
+        prioridade TEXT,
+        status TEXT,
+        especialidade TEXT,
+        duracao_prevista REAL,
+        tecnicos TEXT
+    )""")
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS programacao (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_ordem INTEGER,
+        id_tecnico INTEGER,
+        data TEXT
+    )""")
+
+    conn.commit()
+    conn.close()
+
