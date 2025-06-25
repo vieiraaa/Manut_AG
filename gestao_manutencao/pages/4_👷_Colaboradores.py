@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from login import autenticar_usuario
 from database import listar_colaboradores, adicionar_colaborador, atualizar_colaborador, excluir_colaborador
+from database import inicializar_banco
+inicializar_banco()
 
 autenticar_usuario()
 
