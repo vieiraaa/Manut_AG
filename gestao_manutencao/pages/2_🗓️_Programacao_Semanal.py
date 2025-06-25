@@ -9,6 +9,8 @@ from database import (
     carregar_programacao,
 )
 from algoritmo_genetico import executar_algoritmo_genetico
+from database import inicializar_banco
+inicializar_banco()
 
 autenticar_usuario()
 st.set_page_config(page_title="Programação Semanal", layout="wide")
