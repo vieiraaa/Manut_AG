@@ -1,95 +1,179 @@
-import streamlit as st
-import pandas as pd
-from database import (
-    listar_ordens, listar_colaboradores,
-    adicionar_ordem, excluir_ordem, atualizar_ordem_completa
-)
+import random
+import sqlite3
+import numpy as np
+from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Ordens de Serviço", layout="wide")
-st.title("📄 Ordens de Serviço - Manutenção")
+# Histórico global para gráficos
+historico_fitness_global = []
 
-# === Dados simulados ===
-tipos = ["Corretiva", "Preventiva", "Preditiva", "Inspeção", "Lubrificação", "Melhoria"]
-prioridades = ["Urgente", "Alta", "Média", "Baixa"]
-status_list = ["Pendente", "Aprovada", "Programada", "Iniciada", "Finalizada"]
-setores = ["MDF1", "MDF2", "MDF3"]
-equipamentos = ["Prensa MDF1", "Caldeira MDF1", "Prensa MDF2", "Caldeira MDF2"]
-especialidades = ["MEC", "ELT"]
+def listar_ordens():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM ordens")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
 
-# === Listar colaboradores
-colabs = listar_colaboradores()
-df_colab = pd.DataFrame(colabs, columns=["ID", "Nome", "Especialidade", "Setor", "Jornada", "Dias"])
-nomes_tecnicos = df_colab["Nome"].tolist()
-ids_tecnicos = dict(zip(df_colab["Nome"], df_colab["ID"]))
+def listar_colaboradores():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM colaboradores")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
 
-# === Formulário de nova OS
-with st.expander("➕ Cadastrar Nova Ordem de Serviço"):
-    descricao = st.text_input("Descrição")
-    tipo = st.selectbox("Tipo de Manutenção", tipos)
-    setor = st.selectbox("Setor", setores)
-    equipamento = st.selectbox("Equipamento", equipamentos)
-    prioridade = st.selectbox("Prioridade", prioridades)
-    status = st.selectbox("Status", status_list)  # Adicionado
-    especialidade = st.selectbox("Especialidade", especialidades)
-    duracao = st.number_input("Duração Prevista (h)", min_value=0.5, step=0.5)
-    tecnicos_selecionados = st.multiselect("Técnicos Responsáveis", nomes_tecnicos)
+def adicionar_ordem(descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO ordens (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos))
+    conn.commit()
+    conn.close()
 
-    if st.button("Cadastrar Ordem"):
-        tecnicos_ids = [ids_tecnicos[nome] for nome in tecnicos_selecionados]
-        adicionar_ordem(descricao, tipo, setor, equipamento, prioridade, status, especialidade, duracao, str(tecnicos_ids))
-        st.success("✅ Ordem de Serviço cadastrada com sucesso!")
-        st.experimental_rerun()
+def excluir_ordem(id_ordem):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM ordens WHERE id = ?", (id_ordem,))
+    conn.commit()
+    conn.close()
 
-st.divider()
+def atualizar_ordem_completa(id_ordem, descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        UPDATE ordens SET descricao=?, setor=?, prioridade=?, equipamento=?, tipo_manutencao=?,
+        duracao_prevista=?, tecnicos=?, status=?, especialidade=? WHERE id=?
+    """, (descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade, id_ordem))
+    conn.commit()
+    conn.close()
 
-# === Tabela de ordens
-ordens = listar_ordens()
-if not ordens:
-    st.info("ℹ️ Nenhuma OS cadastrada ainda.")
-    st.stop()
+def limpar_programacao():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM programacao")
+    conn.commit()
+    conn.close()
 
-df_ordens = pd.DataFrame(ordens, columns=[
-    "ID", "Descrição", "Tipo", "Setor", "Equipamento", "Prioridade",
-    "Status", "Especialidade", "Duração", "Técnicos"
-])
-df_ordens["Técnicos"] = df_ordens["Técnicos"].fillna("[]")
+def carregar_programacao():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT id_ordem, id_tecnico, data FROM programacao")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
 
-# === Selecionar OS
-st.subheader("📋 Ordens Cadastradas")
-ordem_id = st.selectbox("Selecione uma OS para editar ou excluir:", df_ordens["ID"])
+def adicionar_colaborador(nome, especialidade, setor, jornada, dias):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO colaboradores (nome, especialidade, setor, jornada, dias)
+        VALUES (?, ?, ?, ?, ?)
+    """, (nome, especialidade, setor, jornada, dias))
+    conn.commit()
+    conn.close()
 
-os_selecionada = df_ordens[df_ordens["ID"] == ordem_id].iloc[0]
+def atualizar_colaborador(id_colab, nome, especialidade, setor, jornada, dias):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        UPDATE colaboradores SET nome=?, especialidade=?, setor=?, jornada=?, dias=? WHERE id=?
+    """, (nome, especialidade, setor, jornada, dias, id_colab))
+    conn.commit()
+    conn.close()
 
-descricao_edit = st.text_input("Descrição", os_selecionada["Descrição"])
-tipo_edit = st.selectbox("Tipo de Manutenção", tipos, index=tipos.index(os_selecionada["Tipo"]))
-setor_edit = st.selectbox("Setor", setores, index=setores.index(os_selecionada["Setor"]), key="setor_edit")
-equipamento_edit = st.selectbox("Equipamento", equipamentos, index=equipamentos.index(os_selecionada["Equipamento"]))
-prioridade_edit = st.selectbox("Prioridade", prioridades, index=prioridades.index(os_selecionada["Prioridade"]))
-status_edit = st.selectbox("Status", status_list, index=status_list.index(os_selecionada["Status"]))
-especialidade_edit = st.selectbox("Especialidade", especialidades, index=especialidades.index(os_selecionada["Especialidade"]))
-duracao_edit = st.number_input("Duração Prevista (h)", value=float(os_selecionada["Duração"]), min_value=0.5, step=0.5)
+def excluir_colaborador(id_colab):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM colaboradores WHERE id = ?", (id_colab,))
+    conn.commit()
+    conn.close()
 
-# Técnicos da OS convertidos de string para lista
-tecnicos_ids_str = os_selecionada["Técnicos"].strip("[]").split(",")
-tecnicos_edit = [df_colab[df_colab["ID"] == int(t)].iloc[0]["Nome"]
-                 for t in tecnicos_ids_str if t.strip().isdigit()]
+def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutacao=0.1):
+    global historico_fitness_global
+    historico_fitness_global = []
 
-tecnicos_edit = st.multiselect("Técnicos Responsáveis", nomes_tecnicos, default=tecnicos_edit)
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM ordens WHERE status = 'Aprovada'")
+    ordens = c.fetchall()
+    c.execute("SELECT * FROM colaboradores")
+    colaboradores = c.fetchall()
+    conn.close()
 
-col1, col2 = st.columns([1, 1])
-with col1:
-    if st.button("Salvar Edição"):
-        tecnicos_ids = [ids_tecnicos[nome] for nome in tecnicos_edit]
-        atualizar_ordem_completa(
-            ordem_id, descricao_edit, setor_edit, prioridade_edit,
-            equipamento_edit, tipo_edit, duracao_edit,
-            str(tecnicos_ids), status_edit, especialidade_edit
-        )
-        st.success("✅ Ordem atualizada com sucesso!")
-        st.experimental_rerun()
+    if not ordens or not colaboradores:
+        return []
 
-with col2:
-    if st.button("🗑️ Excluir Ordem"):
-        excluir_ordem(ordem_id)
-        st.warning("⚠️ Ordem excluída.")
-        st.experimental_rerun()
+    ordem_ids = [o[0] for o in ordens]
+    tecnico_ids = [t[0] for t in colaboradores]
+
+    def gerar_individuo():
+        return [random.choice(tecnico_ids) for _ in ordem_ids]
+
+    def avaliar(individuo):
+        return sum(1 for i, tecnico in enumerate(individuo)
+                   if colaboradores[tecnico_ids.index(tecnico)][2] == ordens[i][7])
+
+    def selecionar(populacao, fitnesses):
+        total = sum(fitnesses)
+        if total == 0:
+            probs = [1 / len(fitnesses)] * len(fitnesses)
+        else:
+            probs = [f / total for f in fitnesses]
+        escolhidos = np.random.choice(len(populacao), size=2, replace=False, p=probs)
+        return populacao[escolhidos[0]], populacao[escolhidos[1]]
+
+    def cruzar(pai1, pai2):
+        ponto = random.randint(1, len(pai1) - 1)
+        return pai1[:ponto] + pai2[ponto:]
+
+    def mutar(individuo):
+        if random.random() < taxa_mutacao:
+            idx = random.randint(0, len(individuo) - 1)
+            individuo[idx] = random.choice(tecnico_ids)
+        return individuo
+
+    populacao = [gerar_individuo() for _ in range(tamanho_populacao)]
+
+    for geracao in range(n_geracoes):
+        fitnesses = [avaliar(ind) for ind in populacao]
+        nova_pop = []
+
+        for _ in range(tamanho_populacao):
+            p1, p2 = selecionar(populacao, fitnesses)
+            filho = cruzar(p1, p2)
+            filho = mutar(filho)
+            nova_pop.append(filho)
+
+        populacao = nova_pop
+
+        melhor = max(fitnesses)
+        media = np.mean(fitnesses)
+        pior = min(fitnesses)
+
+        historico_fitness_global.append({
+            "Melhor": melhor,
+            "Média": media,
+            "Pior": pior
+        })
+
+    melhor_indice = np.argmax([avaliar(ind) for ind in populacao])
+    melhor_individuo = populacao[melhor_indice]
+
+    programacao = []
+    data_base = datetime.today()
+
+    for i, tecnico_id in enumerate(melhor_individuo):
+        data_exec = data_base + timedelta(days=i % 7)
+        data_formatada = data_exec.strftime("%Y-%m-%d")
+        programacao.append((ordem_ids[i], tecnico_id, data_formatada))
+
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM programacao")
+    c.executemany("INSERT INTO programacao (id_ordem, id_tecnico, data) VALUES (?, ?, ?)", programacao)
+    conn.commit()
+    conn.close()
+
+    return programacao
