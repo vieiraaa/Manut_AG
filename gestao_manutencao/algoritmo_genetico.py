@@ -3,18 +3,99 @@ import sqlite3
 import numpy as np
 from datetime import datetime, timedelta
 
-# Histórico global para exibir indicadores e gráficos
+# Histórico global para gráficos
 historico_fitness_global = []
+
+def listar_ordens():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM ordens")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
+
+def listar_colaboradores():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM colaboradores")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
+
+def adicionar_ordem(descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO ordens (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos))
+    conn.commit()
+    conn.close()
+
+def excluir_ordem(id_ordem):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM ordens WHERE id = ?", (id_ordem,))
+    conn.commit()
+    conn.close()
+
+def atualizar_ordem_completa(id_ordem, descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        UPDATE ordens SET descricao=?, setor=?, prioridade=?, equipamento=?, tipo_manutencao=?,
+        duracao_prevista=?, tecnicos=?, status=?, especialidade=? WHERE id=?
+    """, (descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade, id_ordem))
+    conn.commit()
+    conn.close()
+
+def limpar_programacao():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM programacao")
+    conn.commit()
+    conn.close()
+
+def carregar_programacao():
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("SELECT id_ordem, id_tecnico, data FROM programacao")
+    resultado = c.fetchall()
+    conn.close()
+    return resultado
+
+def adicionar_colaborador(nome, especialidade, setor, jornada, dias):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO colaboradores (nome, especialidade, setor, jornada, dias)
+        VALUES (?, ?, ?, ?, ?)
+    """, (nome, especialidade, setor, jornada, dias))
+    conn.commit()
+    conn.close()
+
+def atualizar_colaborador(id_colab, nome, especialidade, setor, jornada, dias):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("""
+        UPDATE colaboradores SET nome=?, especialidade=?, setor=?, jornada=?, dias=? WHERE id=?
+    """, (nome, especialidade, setor, jornada, dias, id_colab))
+    conn.commit()
+    conn.close()
+
+def excluir_colaborador(id_colab):
+    conn = sqlite3.connect("banco_dados.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM colaboradores WHERE id = ?", (id_colab,))
+    conn.commit()
+    conn.close()
 
 def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutacao=0.1):
     global historico_fitness_global
     historico_fitness_global = []
 
-    # Conecta ao banco
     conn = sqlite3.connect("banco_dados.db")
     c = conn.cursor()
-
-    # Coleta OSs e técnicos
     c.execute("SELECT * FROM ordens WHERE status = 'Aprovada'")
     ordens = c.fetchall()
     c.execute("SELECT * FROM colaboradores")
