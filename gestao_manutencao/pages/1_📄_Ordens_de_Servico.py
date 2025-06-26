@@ -62,7 +62,7 @@ os_selecionada = df_ordens[df_ordens["ID"] == ordem_id].iloc[0]
 
 descricao_edit = st.text_input("Descrição", os_selecionada["Descrição"])
 tipo_edit = st.selectbox("Tipo de Manutenção", tipos, index=tipos.index(os_selecionada["Tipo"]))
-setor_edit = st.selectbox("Setor", setores, index=setores.index(os_selecionada["Setor"]))
+setor_edit = st.selectbox("Setor", setores, index=setores.index(os_selecionada["Setor"]), key="setor_edit")
 equipamento_edit = st.selectbox("Equipamento", equipamentos, index=equipamentos.index(os_selecionada["Equipamento"]))
 prioridade_edit = st.selectbox("Prioridade", prioridades, index=prioridades.index(os_selecionada["Prioridade"]))
 status_edit = st.selectbox("Status", status_list, index=status_list.index(os_selecionada["Status"]))
