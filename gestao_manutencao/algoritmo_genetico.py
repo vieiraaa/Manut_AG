@@ -3,92 +3,8 @@ import sqlite3
 import numpy as np
 from datetime import datetime, timedelta
 
-# Histórico global para gráficos
+# Histórico global para os gráficos
 historico_fitness_global = []
-
-def listar_ordens():
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("SELECT * FROM ordens")
-    resultado = c.fetchall()
-    conn.close()
-    return resultado
-
-def listar_colaboradores():
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("SELECT * FROM colaboradores")
-    resultado = c.fetchall()
-    conn.close()
-    return resultado
-
-def adicionar_ordem(descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO ordens (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (descricao, tipo_manutencao, setor, equipamento, prioridade, status, especialidade, duracao_prevista, tecnicos))
-    conn.commit()
-    conn.close()
-
-def excluir_ordem(id_ordem):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("DELETE FROM ordens WHERE id = ?", (id_ordem,))
-    conn.commit()
-    conn.close()
-
-def atualizar_ordem_completa(id_ordem, descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("""
-        UPDATE ordens SET descricao=?, setor=?, prioridade=?, equipamento=?, tipo_manutencao=?,
-        duracao_prevista=?, tecnicos=?, status=?, especialidade=? WHERE id=?
-    """, (descricao, setor, prioridade, equipamento, tipo_manutencao, duracao_prevista, tecnicos, status, especialidade, id_ordem))
-    conn.commit()
-    conn.close()
-
-def limpar_programacao():
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("DELETE FROM programacao")
-    conn.commit()
-    conn.close()
-
-def carregar_programacao():
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("SELECT id_ordem, id_tecnico, data FROM programacao")
-    resultado = c.fetchall()
-    conn.close()
-    return resultado
-
-def adicionar_colaborador(nome, especialidade, setor, jornada, dias):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO colaboradores (nome, especialidade, setor, jornada, dias)
-        VALUES (?, ?, ?, ?, ?)
-    """, (nome, especialidade, setor, jornada, dias))
-    conn.commit()
-    conn.close()
-
-def atualizar_colaborador(id_colab, nome, especialidade, setor, jornada, dias):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("""
-        UPDATE colaboradores SET nome=?, especialidade=?, setor=?, jornada=?, dias=? WHERE id=?
-    """, (nome, especialidade, setor, jornada, dias, id_colab))
-    conn.commit()
-    conn.close()
-
-def excluir_colaborador(id_colab):
-    conn = sqlite3.connect("banco_dados.db")
-    c = conn.cursor()
-    c.execute("DELETE FROM colaboradores WHERE id = ?", (id_colab,))
-    conn.commit()
-    conn.close()
 
 def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutacao=0.1):
     global historico_fitness_global
@@ -113,14 +29,11 @@ def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutaca
 
     def avaliar(individuo):
         return sum(1 for i, tecnico in enumerate(individuo)
-                   if colaboradores[tecnico_ids.index(tecnico)][2] == ordens[i][7])
+                   if colaboradores[tecnico_ids.index(tecnico)][2] == ordens[i][7])  # Especialidade
 
     def selecionar(populacao, fitnesses):
         total = sum(fitnesses)
-        if total == 0:
-            probs = [1 / len(fitnesses)] * len(fitnesses)
-        else:
-            probs = [f / total for f in fitnesses]
+        probs = [f / total if total > 0 else 1/len(fitnesses) for f in fitnesses]
         escolhidos = np.random.choice(len(populacao), size=2, replace=False, p=probs)
         return populacao[escolhidos[0]], populacao[escolhidos[1]]
 
@@ -134,30 +47,27 @@ def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutaca
             individuo[idx] = random.choice(tecnico_ids)
         return individuo
 
+    # Geração inicial
     populacao = [gerar_individuo() for _ in range(tamanho_populacao)]
 
-    for geracao in range(n_geracoes):
+    for _ in range(n_geracoes):
         fitnesses = [avaliar(ind) for ind in populacao]
         nova_pop = []
-
         for _ in range(tamanho_populacao):
             p1, p2 = selecionar(populacao, fitnesses)
             filho = cruzar(p1, p2)
             filho = mutar(filho)
             nova_pop.append(filho)
-
         populacao = nova_pop
 
-        melhor = max(fitnesses)
-        media = np.mean(fitnesses)
-        pior = min(fitnesses)
-
+        # Salvar histórico de fitness
         historico_fitness_global.append({
-            "Melhor": melhor,
-            "Média": media,
-            "Pior": pior
+            "Melhor": max(fitnesses),
+            "Média": np.mean(fitnesses),
+            "Pior": min(fitnesses)
         })
 
+    # Melhor solução
     melhor_indice = np.argmax([avaliar(ind) for ind in populacao])
     melhor_individuo = populacao[melhor_indice]
 
@@ -166,9 +76,9 @@ def executar_algoritmo_genetico(tamanho_populacao=50, n_geracoes=30, taxa_mutaca
 
     for i, tecnico_id in enumerate(melhor_individuo):
         data_exec = data_base + timedelta(days=i % 7)
-        data_formatada = data_exec.strftime("%Y-%m-%d")
-        programacao.append((ordem_ids[i], tecnico_id, data_formatada))
+        programacao.append((ordem_ids[i], tecnico_id, data_exec.strftime("%Y-%m-%d")))
 
+    # Salvar no banco
     conn = sqlite3.connect("banco_dados.db")
     c = conn.cursor()
     c.execute("DELETE FROM programacao")
