@@ -1,7 +1,5 @@
 import streamlit as st
 
-import streamlit as st
-
 def autenticar_usuario():
     if "autenticado" not in st.session_state:
         st.session_state.autenticado = False
