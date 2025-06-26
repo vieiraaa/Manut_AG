@@ -49,7 +49,7 @@ with st.form("nova_os"):
         adicionar_ordem(descricao, tipo, setor, equipamento, prioridade, status,
                         especialidade, duracao, tecnicos)
         st.success("✅ Ordem adicionada com sucesso!")
-        st.experimental_rerun()
+        st.rerun()
 
 st.divider()
 st.subheader("✏️ Editar ou Excluir Ordem Existente")
@@ -89,9 +89,9 @@ with st.form("editar_os"):
                                  equipamento_edit, tipo_edit, duracao_edit, tecnicos_edit,
                                  status_edit, especialidade_edit)
         st.success("✅ Ordem atualizada com sucesso!")
-        st.experimental_rerun()
+        st.rerun()
 
     if col_excluir.form_submit_button("Excluir Ordem"):
         excluir_ordem(id_escolhido)
         st.warning("⚠️ Ordem excluída com sucesso.")
-        st.experimental_rerun()
+        st.rerun()
