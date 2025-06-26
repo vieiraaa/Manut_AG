@@ -5,7 +5,7 @@ def autenticar_usuario():
         st.session_state.autenticado = False
 
     if not st.session_state.autenticado:
-        st.title("🔐 Lodasdsadasdsagin")
+        st.title("🔐 Login")
 
         usuario = st.text_input("Usuário")
         senha = st.text_input("Senha", type="password")
