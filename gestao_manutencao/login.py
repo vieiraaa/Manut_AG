@@ -5,18 +5,17 @@ def autenticar_usuario():
         st.session_state.autenticado = False
 
     if not st.session_state.autenticado:
-        with st.form("login_form"):
-            usuario = st.text_input("Usuário")
-            senha = st.text_input("Senha", type="password")
-            enviar = st.form_submit_button("Entrar")
+        st.title("🔐 Login")
+        usuario = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password")
+        botao = st.button("Entrar")
 
-            if enviar:
-                if usuario == "admin" and senha == "admin123":  # exemplo fixo
-                    st.session_state.autenticado = True
-                    st.success("Login bem-sucedido!")
-                    st.experimental_rerun()
-                else:
-                    st.error("Usuário ou senha incorretos.")
-    else:
-        st.sidebar.success("✅ Logado como admin")
-
+        if botao:
+            if usuario == "admin" and senha == "1234":
+                st.session_state.autenticado = True
+                st.success("Login bem-sucedido!")
+                st.experimental_set_query_params(logged="true")
+                st.switch_page("pages/1_📄_Ordens_de_Servico.py")  # Ou qualquer página inicial
+            else:
+                st.error("Usuário ou senha incorretos.")
+        st.stop()
