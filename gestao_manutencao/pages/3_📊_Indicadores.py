@@ -1,4 +1,5 @@
 import streamlit as st
+import sqlite3
 import pandas as pd
 import plotly.express as px
 from algoritmo_genetico import historico_fitness_global  # Deve estar visível no módulo
@@ -22,13 +23,22 @@ col4.metric("📅 Cumprimento Planejado", f"{cumprimento_planejado}%", "-3.1%")
 
 st.divider()
 
-# === Gráfico de OSs por tipo ===
+# === Gráfico de OSs por tipo (REAL) ===
 st.subheader("Distribuição de Ordens de Manutenção por Tipo")
-tipos = ["Corretiva", "Preventiva", "Preditiva", "Inspeção", "Lubrificação", "Melhoria"]
-quantidades = [38, 22, 18, 10, 7, 5]
-df_tipos = pd.DataFrame({"Tipo": tipos, "Quantidade": quantidades})
-fig_tipos = px.bar(df_tipos, x="Tipo", y="Quantidade", color="Tipo", title="Ordens por Tipo")
-st.plotly_chart(fig_tipos, use_container_width=True)
+
+conn = sqlite3.connect("banco_dados.db")
+c = conn.cursor()
+c.execute("SELECT tipo_manutencao, COUNT(*) FROM ordens GROUP BY tipo_manutencao")
+dados_tipos = c.fetchall()
+conn.close()
+
+if dados_tipos:
+    df_tipos = pd.DataFrame(dados_tipos, columns=["Tipo", "Quantidade"])
+    fig = px.bar(df_tipos, x="Tipo", y="Quantidade", color="Tipo", title="Ordens por Tipo (Base Real)")
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("ℹ️ Nenhuma ordem de manutenção cadastrada no momento.")
+
 
 # === Backlog semanal ===
 st.subheader("Evolução do Backlog nas Últimas Semanas")
